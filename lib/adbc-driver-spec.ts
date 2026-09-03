@@ -139,4 +139,3 @@ export function hiddenAdbcFieldKeysForDriver(
   const d = (driver ?? "").trim().toLowerCase() as AdbcDriverId;
   return (ADBC_DRIVER_SPECS as Partial<Record<string, Spec>>)[d]?.hiddenFieldKeys ?? null;
 }
-
