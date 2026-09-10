@@ -23,7 +23,7 @@ Every push to `main` publishes:
 
 `ghcr.io/lakeops-org/queryflux-studio:latest`
 
-[Release Please](https://github.com/googleapis/release-please) (same pattern as [lakekeeper/console](https://github.com/lakekeeper/console/blob/main/.github/workflows/release.yml)) opens a version PR from conventional commits. Merging that PR tags `vX.Y.Z` and also publishes:
+[Release Please](https://github.com/googleapis/release-please) opens a version PR from conventional commits. Merging that PR tags `vX.Y.Z` and also publishes:
 
 - `ghcr.io/lakeops-org/queryflux-studio:vX.Y.Z`
 - `ghcr.io/lakeops-org/queryflux-studio:X.Y.Z`

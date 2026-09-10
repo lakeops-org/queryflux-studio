@@ -1,5 +1,4 @@
-# Release Please + GHCR publish, modeled on lakekeeper/console:
-# https://github.com/lakekeeper/console/blob/main/.github/workflows/release.yml
+# Release Please + GHCR publish.
 #
 # - Every push to main publishes :latest (snapshot).
 # - Release Please opens a version PR from conventional commits.
