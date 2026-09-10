@@ -19,9 +19,17 @@ For QueryFlux server setup and configuration, see the [QueryFlux repository](htt
 
 ## Deploy
 
-The Studio container is published as:
+Every push to `main` publishes:
 
 `ghcr.io/lakeops-org/queryflux-studio:latest`
+
+[Release Please](https://github.com/googleapis/release-please) (same pattern as [lakekeeper/console](https://github.com/lakekeeper/console/blob/main/.github/workflows/release.yml)) opens a version PR from conventional commits. Merging that PR tags `vX.Y.Z` and also publishes:
+
+- `ghcr.io/lakeops-org/queryflux-studio:vX.Y.Z`
+- `ghcr.io/lakeops-org/queryflux-studio:X.Y.Z`
+- `ghcr.io/lakeops-org/queryflux-studio:X.Y`
+
+QueryFlux's unified image currently copies `:latest`. Pin a `vX.Y.Z` tag there when you want a QueryFlux release to embed a known Studio.
 
 It serves the UI on port `3000` and connects to the QueryFlux Admin API using `ADMIN_API_URL`.
 
