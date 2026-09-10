@@ -26,6 +26,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
+
+# Configure ADMIN_API_URL when QueryFlux's Admin API is not reachable at
+# http://localhost:9000 from this container. Optional ADMIN_API_USERNAME
+# and ADMIN_API_PASSWORD can be used when authentication is required.
+
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0

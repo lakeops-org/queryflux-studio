@@ -17,6 +17,27 @@ Postgres-backed features such as query history and persisted cluster configurati
 
 For QueryFlux server setup and configuration, see the [QueryFlux repository](https://github.com/lakeops-org/queryflux).
 
+## Deploy
+
+The Studio container is published as:
+
+`ghcr.io/lakeops-org/queryflux-studio:latest`
+
+It serves the UI on port `3000` and connects to the QueryFlux Admin API using `ADMIN_API_URL`.
+
+For example, when QueryFlux is reachable from the container at `host.docker.internal:9000`:
+
+```bash
+docker run --rm \
+  -p 3000:3000 \
+  -e ADMIN_API_URL=http://host.docker.internal:9000 \
+  ghcr.io/lakeops-org/queryflux-studio:latest
+```
+
+If the Admin API requires authentication, set `ADMIN_API_USERNAME` and `ADMIN_API_PASSWORD` as well.
+
+The Studio image is also bundled into QueryFlux's unified image under `/app/studio`.
+
 ## Adding or changing a backend in the UI
 
 See the [QueryFlux backend support guide](https://github.com/lakeops-org/queryflux/blob/main/website/docs/architecture/adding-support/backend.md) for the backend-side integration steps.
