@@ -3,6 +3,7 @@
 import { X, Clock, Server, User, Rows3, Hash, ArrowRight, Fingerprint, Cpu, Database, MemoryStick, HardDrive, Tag, Bot, Shield } from "lucide-react";
 import type { QueryHistoryRecord, RoutingTrace } from "@/lib/api-types";
 import { StatusBadge, EngineBadge, formatDuration, formatDateTime } from "@/components/ui-helpers";
+import { TranslationBadge } from "@/components/translation-badge";
 import { GuardActionsList } from "@/components/guard-actions-list";
 
 /** Reusable detail body — used both in the slide-over panel and inline in agent conversations. */
@@ -89,7 +90,12 @@ export function QueryDetailContent({ query }: { query: QueryHistoryRecord }) {
           </pre>
         </div>
 
-        {/* Translation */}
+        {/* Translation outcome is independent of whether the SQL text changed. */}
+        <div>
+          <SectionLabel>Translation</SectionLabel>
+          <TranslationBadge outcome={query.translation} showReason />
+        </div>
+
         {query.was_translated && (
           <div>
             <SectionLabel>Translated SQL</SectionLabel>
@@ -153,11 +159,7 @@ export function QueryDetail({
           <div className="flex items-center gap-2.5 flex-wrap">
             <StatusBadge status={query.status} />
             <EngineBadge engine={query.engine_type} />
-            {query.was_translated && (
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200 font-medium">
-                translated
-              </span>
-            )}
+            <TranslationBadge outcome={query.translation} />
           </div>
           <button
             onClick={onClose}
