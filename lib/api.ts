@@ -1,6 +1,7 @@
 import type {
   AgentListParams,
   AgentSummary,
+  AccessControlConfigDto,
   CatalogProviderConfig,
   ClusterStateDto,
   ConversationListParams,
@@ -258,6 +259,14 @@ export async function putCatalogProviderConfig(config: CatalogProviderConfig): P
   return apiPutNoContent("/admin/config/catalog", config);
 }
 
+export async function getAccessControlConfig(): Promise<AccessControlConfigDto> {
+  return apiFetch<AccessControlConfigDto>("/admin/config/access-control");
+}
+
+export async function putAccessControlConfig(config: AccessControlConfigDto): Promise<void> {
+  return apiPutNoContent("/admin/config/access-control", config);
+}
+
 export async function testCatalogProviderConfig(
   config: CatalogProviderConfig,
 ): Promise<TestCatalogProviderResponse> {
@@ -478,6 +487,7 @@ export type {
   GuardAction,
   GuardSpecDto,
   GuardrailsConfig,
+  AccessControlConfigDto,
   ProtocolFrontendDto,
   GroupAuthzDto,
   LdapConfigDto,

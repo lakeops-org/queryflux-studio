@@ -24,6 +24,7 @@ const DEFAULT_CACHE: CatalogCacheConfigDto = { ttlSeconds: 300, maxEntries: 1000
 // query. Fully editable/removable via the checkbox in its section.
 const DEFAULTS: Record<ProviderType, CatalogProviderConfig> = {
   null: { type: "null" },
+  static: { type: "static", tables: {} },
   hiveMetastore: { type: "hiveMetastore", uri: "", cache: DEFAULT_CACHE },
   glue: { type: "glue", region: null, auth: null, cache: DEFAULT_CACHE },
   icebergRest: {
@@ -43,6 +44,7 @@ const DEFAULTS: Record<ProviderType, CatalogProviderConfig> = {
 
 const TYPE_LABELS: Record<ProviderType, string> = {
   null: "None",
+  static: "Static (inline table schemas)",
   hiveMetastore: "Hive Metastore",
   glue: "AWS Glue",
   icebergRest: "Iceberg REST Catalog",
@@ -268,6 +270,19 @@ function CatalogProviderConfigEditor({
           ))}
         </select>
       </Field>
+
+      {value.type === "static" && (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs text-slate-500">
+            {Object.keys(value.tables).length} table
+            {Object.keys(value.tables).length === 1 ? "" : "s"} configured inline. Edit the YAML
+            config directly for now — Studio shows the current value read-only.
+          </p>
+          <pre className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 overflow-auto max-h-64">
+            {JSON.stringify(value.tables, null, 2)}
+          </pre>
+        </div>
+      )}
 
       {value.type === "hiveMetastore" && (
         <div className="mt-3 space-y-4">

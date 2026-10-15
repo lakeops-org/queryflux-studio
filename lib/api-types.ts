@@ -45,6 +45,7 @@ export interface DashboardStats {
   error_rate_last_hour: number;       // fraction 0.0–1.0
   avg_duration_ms_last_hour: number;
   translation_rate_last_hour: number; // fraction 0.0–1.0
+  rewrite_rate_last_hour: number; // fraction 0.0–1.0
 }
 
 /** `GET /admin/frontends` — effective protocol listeners from startup config (snake_case JSON). */
@@ -64,7 +65,7 @@ export interface FrontendsStatusDto {
 
 export interface GuardAction {
   guard: string;
-  action: "allow" | "warn" | "deny";
+  action: "allow" | "warn" | "deny" | "rewrite";
   reason: string | null;
   code: string | null;
   /** Free-form key/value metadata returned by the guard (e.g. matched rule, estimated rows). */
@@ -80,9 +81,12 @@ export interface QueryHistoryRecord {
   cluster_name: string;
   engine_type: string;
   frontend_protocol: string;
+  was_rewritten: boolean;
   was_translated: boolean;
   username: string | null;
   sql_preview: string;
+  /** Source-dialect SQL after access-control rewrite. Only present when was_rewritten is true. */
+  rewritten_sql: string | null;
   /** The SQL after dialect translation. Only present when was_translated is true. */
   translated_sql: string | null;
   status: string;
@@ -169,6 +173,7 @@ export interface GroupStatRow {
   max_execution_ms: number;
   avg_queue_ms: number;
   translated_queries: number;
+  rewritten_queries: number;
   total_rows_returned: number;
 }
 
@@ -188,6 +193,7 @@ export interface EngineStatRow {
   /** Average time spent queued before execution, in milliseconds. */
   avg_queue_ms: number;
   translated_queries: number;
+  rewritten_queries: number;
   total_rows_returned: number;
 }
 
@@ -561,8 +567,23 @@ export type IcebergRestAuthConfig =
   | { type: "oauth2ClientCredentials"; clientId: string; clientSecret: string }
   | { type: "bearerToken"; token: string };
 
+/** One column in a `static` catalog provider's inline table schema. */
+export interface StaticColumnConfigDto {
+  name: string;
+  dataType: string;
+  nullable?: boolean;
+}
+
+/** One table in a `static` catalog provider's inline schema, keyed by bare table name. */
+export interface StaticTableEntryDto {
+  catalog?: string;
+  database?: string;
+  columns: StaticColumnConfigDto[];
+}
+
 export type CatalogProviderConfig =
   | { type: "null" }
+  | { type: "static"; tables: Record<string, StaticTableEntryDto> }
   | { type: "hiveMetastore"; uri: string; cache?: CatalogCacheConfigDto | null }
   | {
       type: "glue";
@@ -587,4 +608,85 @@ export type CatalogProviderConfig =
 export interface TestCatalogProviderResponse {
   ok: boolean;
   message: string;
+}
+
+// ---------------------------------------------------------------------------
+// Access control (GET/PUT /admin/config/access-control)
+//
+// Named connections: no name is reserved. A cluster group resolves to a connection via its
+// own `groups.<name>.connection`, else the top-level `defaultConnection` — if neither is
+// set, that group gets no access control at all. Studio edits: each connection's provider
+// (OPA or Cerbos) + URL/credentials, global `enabled`, `defaultConnection`, and per-group
+// `enabled` + `connection`. YAML-only (preserved on save, not shown in UI): operations,
+// cache, sessionParamKeys, failOpen, onMissingSchema (per connection), groups.<name>.failOpen.
+// ---------------------------------------------------------------------------
+
+export type AccessControlProvider = "opa" | "cerbos";
+export type OnMissingSchema = "evaluate" | "deny";
+
+export interface OpaClientCredentialsDto {
+  clientId: string;
+  clientSecret?: string;
+  clientSecretSet?: boolean;
+  tokenEndpoint: string;
+}
+
+export interface OpaProviderConfigDto {
+  url: string;
+  decisionPath: string;
+  timeoutMs: number;
+  bearerToken?: string;
+  bearerTokenSet?: boolean;
+  clientCredentials?: OpaClientCredentialsDto | null;
+}
+
+/** Cerbos PDP connection. No OAuth2 client-credentials — bearer token only. */
+export interface CerbosProviderConfigDto {
+  url: string;
+  checkResourcesPath: string;
+  timeoutMs: number;
+  bearerToken?: string;
+  bearerTokenSet?: boolean;
+}
+
+/** One named entry under `accessControl.connections`. */
+export interface AccessControlConnectionDto {
+  provider: AccessControlProvider;
+  opa?: OpaProviderConfigDto | null;
+  cerbos?: CerbosProviderConfigDto | null;
+  operations: string[];
+  onMissingSchema: OnMissingSchema;
+  failOpen: boolean;
+  cacheTtlMs: number;
+  cacheCapacity: number;
+  sessionParamKeys: string[];
+}
+
+export interface AccessControlGroupOverrideDto {
+  /** Override global default for this cluster group. Omit to inherit. */
+  enabled?: boolean | null;
+  failOpen?: boolean | null;
+  /**
+   * Named entry under `connections` this group uses. Omit to inherit
+   * `AccessControlConfigDto.defaultConnection` — if that's also unset, this group gets no
+   * access control at all.
+   */
+  connection?: string | null;
+}
+
+export interface AccessControlConfigDto {
+  /** Global default: run access control for a group unless groups.<name>.enabled overrides. */
+  enabled?: boolean;
+  /**
+   * Named connection a group uses when it has no explicit `groups.<name>.connection`
+   * override. Unset means such a group gets no access control at all — there's nothing to
+   * route it to. Must reference a key present in `connections` when set.
+   */
+  defaultConnection?: string | null;
+  /**
+   * Named policy-provider connections. No name is reserved. Empty/absent disconnects access
+   * control entirely — no guard is loaded, since nothing could ever resolve a connection.
+   */
+  connections: Record<string, AccessControlConnectionDto>;
+  groups: Record<string, AccessControlGroupOverrideDto>;
 }
