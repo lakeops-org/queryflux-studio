@@ -54,6 +54,12 @@ export function QueryTable({ queries }: { queries: QueryHistoryRecord[] }) {
                           CACHED
                         </span>
                       )}
+                      {q.was_rewritten && (
+                        <span className="text-[10px] font-medium text-amber-600 flex items-center gap-0.5">
+                          <span className="w-1 h-1 rounded-full bg-amber-400 inline-block"></span>
+                          rewritten
+                        </span>
+                      )}
                       {q.was_translated && (
                         <span className="text-[10px] font-medium text-violet-500 flex items-center gap-0.5">
                           <span className="w-1 h-1 rounded-full bg-violet-400 inline-block"></span>

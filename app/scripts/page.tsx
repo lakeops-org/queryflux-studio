@@ -17,7 +17,9 @@ const TAB_META: Record<Tab, { label: string; description: React.ReactNode }> = {
       <>
         <strong>Translation fixup</strong> scripts run after sqlglot when the client dialect differs
         from the engine. Each defines{" "}
-        <code>def transform(ast, src, dst)</code>. Attach them to cluster groups in{" "}
+        <code>def transform(sql, src, dst) -&gt; str</code> — plain SQL text in, SQL text out (import
+        sqlglot yourself inside the script if you need AST-level control). Attach them to cluster
+        groups in{" "}
         <strong>Groups</strong>.{" "}
         <strong>Routing</strong> Python (<code>def route(query, ctx)</code>) is configured only on
         the{" "}
