@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Bot,
   BookOpen,
+  Boxes,
   Database,
   FileCode,
   LayoutDashboard,
@@ -25,6 +26,7 @@ const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clusters", label: "Clusters", icon: Server },
   { href: "/engines", label: "Groups", icon: Layers },
+  { href: "/workers", label: "Workers", icon: Boxes },
   { href: "/scripts", label: "Scripts", icon: FileCode },
   { href: "/queries", label: "Query History", icon: List },
   { href: "/agents", label: "Agents", icon: Bot },

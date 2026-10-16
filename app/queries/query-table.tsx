@@ -71,7 +71,14 @@ export function QueryTable({ queries }: { queries: QueryHistoryRecord[] }) {
                     </div>
                   </td>
                   <td className="px-4 py-3"><EngineBadge engine={q.engine_type} /></td>
-                  <td className="px-4 py-3 text-xs text-slate-500 font-mono">{q.cluster_name}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500 font-mono">
+                    {q.cluster_name}
+                    {q.worker && (
+                      <div className="text-[10px] text-indigo-500 mt-0.5" title="Run by this worker">
+                        via {q.worker}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-xs text-slate-600 tabular-nums font-medium">
                     {formatDuration(q.execution_duration_ms)}
                   </td>

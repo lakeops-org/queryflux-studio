@@ -125,6 +125,65 @@ export interface QueryHistoryRecord {
   was_guard_blocked: boolean;
   /** True when the result was served from the query result cache. */
   cache_hit: boolean;
+  /** The worker that ran the query; null when the control plane (or a standalone proxy) ran it. */
+  worker?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Worker fleet (GET /admin/workers) — camelCase, unlike the older DTOs above.
+// ---------------------------------------------------------------------------
+
+export interface WorkerHistoryStatus {
+  /** `full`, `maskLiterals` or `metadata`. */
+  redaction: string | null;
+  endpoint: string | null;
+  queued: number;
+  sent: number;
+  dropped: number;
+  lastError: string | null;
+}
+
+export interface WorkerStatus {
+  /** `controlPlane`, or `peer` when the config was copied from another worker at startup. */
+  configSource: string | null;
+  /** True while the active config has not been confirmed by the control plane. */
+  stale: boolean;
+  confirmedAt: string | null;
+  activatedAt: string | null;
+  lastSuccessfulSync: string | null;
+  consecutiveFailures: number;
+  /** `failClosed` or `localLimits`. */
+  onUnavailable: string | null;
+  heartbeatIntervalSecs: number | null;
+  history: WorkerHistoryStatus | null;
+  /** Enabled query frontends, e.g. `trinoHttp:8080`. */
+  frontends: string[];
+}
+
+export interface WorkerView {
+  name: string;
+  version: string;
+  labels: Record<string, string>;
+  /** `controlPlane` or `local`. */
+  coordinationMode: string;
+  downloadedRevision: string | null;
+  activeRevision: string | null;
+  lastError: string | null;
+  lastSeen: string;
+  registeredAt: string | null;
+  status: WorkerStatus;
+  state: "online" | "offline";
+  /** Whether the worker runs the control plane's current revision; null when unknown. */
+  inSync: boolean | null;
+  secondsSinceSeen: number;
+}
+
+export interface WorkerFleetDto {
+  /** Whether this process serves workers (`queryflux.workerApi.enabled`). */
+  enabled: boolean;
+  controlPlaneRevision: string | null;
+  revisionError: string | null;
+  workers: WorkerView[];
 }
 
 export interface AgentSummary {
@@ -320,6 +379,8 @@ export interface QueryListParams {
   status?: string;
   cluster_group?: string;
   engine?: string;
+  /** Only queries run by this worker. */
+  worker?: string;
   limit?: number;
   offset?: number;
 }

@@ -23,6 +23,7 @@ export function QueryDetailContent({ query }: { query: QueryHistoryRecord }) {
         )}
         <MetaItem icon={<Server size={13} />} label="Cluster" value={`${query.cluster_group} / ${query.cluster_name}`} />
         <MetaItem icon={<Hash size={13} />} label="Protocol" value={query.frontend_protocol} />
+        {query.worker && <MetaItem icon={<Server size={13} />} label="Worker" value={query.worker} />}
         <MetaItem icon={<User size={13} />} label="User" value={query.username ?? "—"} />
         <MetaItem icon={<Rows3 size={13} />} label="Rows" value={query.rows_returned?.toLocaleString() ?? "—"} />
         <MetaItem icon={<Fingerprint size={13} />} label="Proxy ID" value={query.proxy_query_id} />
