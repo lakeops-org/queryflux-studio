@@ -1,19 +1,23 @@
 /**
  * Starter bodies for user_scripts rows. Must match runtime contracts:
- * - translation_fixup: sqlglot AST transform
+ * - translation_fixup: string-in/string-out SQL transform (see website/docs/architecture/query-translation.md)
  * - routing: PythonScriptRouter `route(query, ctx)` (see website/docs/architecture/routing-and-clusters.md)
  * - guard: GuardChain `check(ctx)` returns {"action": "allow"|"warn"|"deny", ...}
  * - clusterStrategy: PythonScriptStrategy `select_cluster(candidates)` (see website/docs/architecture/routing-and-clusters.md)
  */
 
-export const TRANSLATION_FIXUP_TEMPLATE = `# Do not remove the imports below — they are required by the proxy.
-from sqlglot.expressions import Expression
-import sqlglot.expressions as exp
-
-
-def transform(ast: Expression, src: str, dst: str) -> None:
+export const TRANSLATION_FIXUP_TEMPLATE = `def transform(sql: str, src: str, dst: str) -> str:
+    # sql: the already-translated SQL text
     # src: source dialect (e.g. "trino"), dst: target dialect (e.g. "athena")
-    pass
+    # returns: the (possibly modified) SQL text
+    #
+    # Need AST-level control? Import sqlglot (or any other parser) yourself:
+    #   import sqlglot
+    #   import sqlglot.expressions as exp
+    #   ast = sqlglot.parse_one(sql, dialect=dst)
+    #   ...
+    #   return ast.sql(dialect=dst)
+    return sql
 `;
 
 export const GUARD_SCRIPT_TEMPLATE = `def check(ctx: dict) -> dict:

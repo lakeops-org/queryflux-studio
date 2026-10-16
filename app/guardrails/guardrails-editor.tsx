@@ -172,8 +172,13 @@ export function GuardrailsEditor({ initialConfig, initialScripts }: GuardrailsEd
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Guardrails</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Guards inspect the final SQL before it reaches the engine. Configure built-in guards,
-          Python scripts, or HTTP webhooks globally or per cluster group.
+          Guards inspect SQL before it reaches the engine (after dialect translation for most
+          guards). Configure built-in guards, Python scripts, or HTTP webhooks globally or per
+          cluster group. Table grants, row filters, and column masks are{" "}
+          <a href="/access-control" className="text-indigo-600 hover:underline">
+            Access control
+          </a>{" "}
+          (OPA or Cerbos, pre-translation) — not configured here.
         </p>
       </div>
 

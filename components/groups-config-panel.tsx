@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import type { ClusterGroupConfigRecord } from "@/lib/api-types";
 import { formatStrategySummary } from "@/lib/cluster-group-strategy";
-import { deleteGroupConfig } from "@/lib/api";
+import { deleteGroupConfig, getAccessControlConfig } from "@/lib/api";
+import type { AccessControlConfigDto } from "@/lib/api-types";
+import { AccessControlGroupStatus } from "@/components/access-control-group-status";
 import { GroupFormDialog } from "@/components/group-form-dialog";
 
 type Props = {
@@ -28,8 +30,17 @@ export function GroupsConfigPanel({ groups, clusterNames }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<ClusterGroupConfigRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [accessControlConfig, setAccessControlConfig] = useState<AccessControlConfigDto | null>(
+    null,
+  );
 
   const existingGroupNames = sortedGroups.map((g) => g.name);
+
+  useEffect(() => {
+    getAccessControlConfig()
+      .then(setAccessControlConfig)
+      .catch(() => setAccessControlConfig(null));
+  }, []);
 
   function openCreate() {
     setFormMode("create");
@@ -105,6 +116,7 @@ export function GroupsConfigPanel({ groups, clusterNames }: Props) {
               <tr className="border-b border-slate-100 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                 <th className="px-6 py-3">Name</th>
                 <th className="px-4 py-3">Enabled</th>
+                <th className="px-4 py-3">Access control</th>
                 <th className="px-4 py-3">Members</th>
                 <th className="px-4 py-3 min-w-[140px]">Strategy</th>
                 <th className="px-4 py-3 w-24">Max run</th>
@@ -126,6 +138,13 @@ export function GroupsConfigPanel({ groups, clusterNames }: Props) {
                     >
                       {g.enabled ? "Yes" : "No"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <AccessControlGroupStatus
+                      groupName={g.name}
+                      config={accessControlConfig}
+                      variant="compact"
+                    />
                   </td>
                   <td className="px-4 py-3 text-slate-600 max-w-md">
                     <span className="text-xs line-clamp-2" title={g.members.join(", ")}>

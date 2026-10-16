@@ -55,6 +55,12 @@ export function QueryTable({ queries }: { queries: QueryHistoryRecord[] }) {
                           CACHED
                         </span>
                       )}
+                      {q.was_rewritten && (
+                        <span className="text-[10px] font-medium text-amber-600 flex items-center gap-0.5">
+                          <span className="w-1 h-1 rounded-full bg-amber-400 inline-block"></span>
+                          rewritten
+                        </span>
+                      )}
                       <TranslationBadge outcome={q.translation} />
                       {q.agent_id && (
                         <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-md">

@@ -3,13 +3,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ChevronDown, ChevronUp, Loader2, X } from "lucide-react";
-import { getGuardrailsConfig, invalidateGroupCache, listUserScripts, putGuardrailsConfig, renameGroupConfig, upsertGroupConfig } from "@/lib/api";
+import {
+  getAccessControlConfig,
+  getGuardrailsConfig,
+  invalidateGroupCache,
+  listUserScripts,
+  putGuardrailsConfig,
+  renameGroupConfig,
+  upsertGroupConfig,
+} from "@/lib/api";
 import type {
+  AccessControlConfigDto,
   ClusterGroupConfigRecord,
   GuardrailsConfig,
   UpsertClusterGroupConfig,
   UserScriptRecord,
 } from "@/lib/api-types";
+import { AccessControlGroupStatus } from "@/components/access-control-group-status";
 import { dtoToRow, GuardList, rowToDto, type GuardRow } from "@/components/guard-list";
 import {
   buildStrategyPayload,
@@ -60,6 +70,9 @@ export function GroupFormDialog({
   const [tagRows, setTagRows] = useState<{ id: number; key: string; value: string }[]>([]);
   const [guardRows, setGuardRows] = useState<GuardRow[]>([]);
   const [guardrailsFull, setGuardrailsFull] = useState<GuardrailsConfig | null>(null);
+  const [accessControlConfig, setAccessControlConfig] = useState<AccessControlConfigDto | null>(
+    null,
+  );
   const [guardScripts, setGuardScripts] = useState<UserScriptRecord[]>([]);
   const [cacheEnabled, setCacheEnabled] = useState(false);
   const [cacheTtl, setCacheTtl] = useState("300");
@@ -164,6 +177,21 @@ export function GroupFormDialog({
       cancelled = true;
     };
   }, [open, mode, initial?.name, guardScripts]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    getAccessControlConfig()
+      .then((cfg) => {
+        if (!cancelled) setAccessControlConfig(cfg);
+      })
+      .catch(() => {
+        if (!cancelled) setAccessControlConfig(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   function addMember(name: string) {
     setMemberOrder((prev) => (prev.includes(name) ? prev : [...prev, name]));
@@ -406,6 +434,14 @@ export function GroupFormDialog({
                 Changing the name updates routing fallback text when it matched the old name. Routing rules use stable ids.
               </p>
             </div>
+          )}
+
+          {(mode === "edit" ? groupName : groupName.trim()) && (
+            <AccessControlGroupStatus
+              groupName={mode === "edit" ? groupName : groupName.trim()}
+              config={accessControlConfig}
+              variant="banner"
+            />
           )}
 
           <div className="flex items-center justify-between gap-4">

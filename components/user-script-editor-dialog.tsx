@@ -15,7 +15,7 @@ const KIND_META: Record<string, { label: string; template: string; hint: string 
   translation_fixup: {
     label: "Translation script",
     template: TRANSLATION_FIXUP_TEMPLATE,
-    hint: "Define def transform(ast, src, dst) -> None:",
+    hint: "Define def transform(sql, src, dst) -> str:",
   },
 };
 

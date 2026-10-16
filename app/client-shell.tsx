@@ -15,6 +15,7 @@ import {
   Server,
   Shield,
   ShieldCheck,
+  Fingerprint,
   Zap,
 } from "lucide-react";
 import { LoginDialog } from "@/components/login-dialog";
@@ -29,6 +30,7 @@ const nav = [
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/security", label: "Security", icon: Shield },
   { href: "/guardrails", label: "Guardrails", icon: ShieldCheck },
+  { href: "/access-control", label: "Access Control", icon: Fingerprint },
   { href: "/protocols", label: "Protocols", icon: Radio },
   { href: "/routing", label: "Routing", icon: Route },
   { href: "/catalog", label: "Catalog", icon: Database },

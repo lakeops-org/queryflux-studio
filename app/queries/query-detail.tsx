@@ -90,12 +90,24 @@ export function QueryDetailContent({ query }: { query: QueryHistoryRecord }) {
           </pre>
         </div>
 
+        {/* Access-control rewrite (source dialect) */}
+        {query.was_rewritten && (
+          <div>
+            <SectionLabel>Rewritten SQL (access control)</SectionLabel>
+            <p className="text-xs text-slate-500 mb-2">Row filters and column masks applied before dialect translation.</p>
+            <pre className="bg-slate-950 text-amber-200 rounded-xl p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed border border-amber-900/40">
+              {query.rewritten_sql ?? "—"}
+            </pre>
+          </div>
+        )}
+
         {/* Translation outcome is independent of whether the SQL text changed. */}
         <div>
           <SectionLabel>Translation</SectionLabel>
           <TranslationBadge outcome={query.translation} showReason />
         </div>
 
+        {/* Dialect translation */}
         {query.was_translated && (
           <div>
             <SectionLabel>Translated SQL</SectionLabel>
@@ -159,6 +171,11 @@ export function QueryDetail({
           <div className="flex items-center gap-2.5 flex-wrap">
             <StatusBadge status={query.status} />
             <EngineBadge engine={query.engine_type} />
+            {query.was_rewritten && (
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 ring-1 ring-amber-200 font-medium">
+                rewritten
+              </span>
+            )}
             <TranslationBadge outcome={query.translation} />
           </div>
           <button
