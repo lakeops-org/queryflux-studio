@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { QueryHistoryRecord } from "@/lib/api-types";
 import { StatusBadge, EngineBadge, formatDuration, formatDateTime } from "@/components/ui-helpers";
 import { GuardSummaryBadge } from "@/components/guard-actions-list";
+import { TranslationBadge } from "@/components/translation-badge";
 import { QueryDetail } from "./query-detail";
 import { Bot, Database, Tag } from "lucide-react";
 
@@ -60,12 +61,7 @@ export function QueryTable({ queries }: { queries: QueryHistoryRecord[] }) {
                           rewritten
                         </span>
                       )}
-                      {q.was_translated && (
-                        <span className="text-[10px] font-medium text-violet-500 flex items-center gap-0.5">
-                          <span className="w-1 h-1 rounded-full bg-violet-400 inline-block"></span>
-                          translated
-                        </span>
-                      )}
+                      <TranslationBadge outcome={q.translation} />
                       {q.agent_id && (
                         <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-md">
                           <Bot size={9} />

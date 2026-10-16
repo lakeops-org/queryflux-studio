@@ -72,6 +72,11 @@ export interface GuardAction {
   metadata?: Record<string, string> | null;
 }
 
+export interface TranslationOutcome {
+  status: "yes" | "no" | "fallback";
+  reason: "sqlglot_unavailable" | "transpile_error" | "not_needed" | "no_schema" | "optimize_error" | null;
+}
+
 export interface QueryHistoryRecord {
   id: number;
   proxy_query_id: string;
@@ -83,6 +88,8 @@ export interface QueryHistoryRecord {
   frontend_protocol: string;
   was_rewritten: boolean;
   was_translated: boolean;
+  /** Outcome of the translation stage; absent or null when no outcome was recorded. */
+  translation?: TranslationOutcome | null;
   username: string | null;
   sql_preview: string;
   /** Source-dialect SQL after access-control rewrite. Only present when was_rewritten is true. */
