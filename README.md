@@ -39,7 +39,7 @@ SQL clients  →  QueryFlux (protocols :8080 / :5432 / :3306 / …)
 Browser :3000  →  Studio ───────┘  same-origin /api/admin-proxy
 ```
 
-The QueryFlux **unified image** already bundles Studio at `/app/studio` on port `3000`. This repo is for running Studio standalone, hacking on the UI, or publishing `ghcr.io/lakeops-org/queryflux-studio`.
+The QueryFlux image `ghcr.io/lakeops-org/queryflux:<version>` bundles Studio at `/app/studio` on port `3000`, and this repo builds it (see [Bundled QueryFlux image](#bundled-queryflux-image)). Use this repo to run Studio on its own, work on the UI, or publish `ghcr.io/lakeops-org/queryflux-studio`.
 
 ## What you can do
 
@@ -107,6 +107,25 @@ Images:
 | `:vX.Y.Z`, `:X.Y.Z`, `:X.Y` | [Release Please](https://github.com/googleapis/release-please) cut (conventional commits) |
 
 Pin a versioned tag from QueryFlux when you want a release to embed a known Studio. `:latest` is the snapshot.
+
+### Bundled QueryFlux image
+
+`ghcr.io/lakeops-org/queryflux:<version>` (server + Studio) is the `bundled` target of the [Dockerfile](Dockerfile). It starts from the server-only image `ghcr.io/lakeops-org/queryflux:<version>-slim` and adds Node and Studio, so it needs no Rust build. [bundled-image.yml](.github/workflows/bundled-image.yml) publishes it:
+
+| Trigger | Base | Tags |
+| --- | --- | --- |
+| QueryFlux publishes `:latest-slim` / `:vX.Y.Z-slim` (`queryflux-image` dispatch) | `:<version>-slim` | `:<version>`, plus `:latest` from the release workflow |
+| Push to `main` here | `:latest-slim` | `:latest` |
+| Manual run | `:<version>-slim` or `:latest-slim` | `:<version>` or `:latest` |
+
+Build it locally:
+
+```bash
+docker build --target bundled -t queryflux:local .
+docker build --target bundled --build-arg QUERYFLUX_IMAGE=ghcr.io/lakeops-org/queryflux:v0.5.0-slim -t queryflux:v0.5.0 .
+```
+
+To push to the `queryflux` package, the workflow needs one of two things. Either grant this repository **Write** under the package's *Manage Actions access*, or add a `QUERYFLUX_PACKAGES_TOKEN` secret that has `write:packages`.
 
 ## Engines in the UI
 

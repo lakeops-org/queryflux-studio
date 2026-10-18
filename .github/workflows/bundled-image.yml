@@ -1,0 +1,115 @@
+# Publishes the QueryFlux server + Studio image (ghcr.io/lakeops-org/queryflux:<tag>).
+#
+# The image is the `bundled` target of ./Dockerfile: Studio layered on top of the
+# server-only image (queryflux:<tag>-slim) that lakeops-org/queryflux publishes, so
+# QueryFlux never compiles Rust twice and a Studio change never needs a Rust build.
+#
+# - lakeops-org/queryflux sends a `queryflux-image` repository_dispatch after it pushes a
+#   slim image: {"version": "v0.5.0" | "", "latest": true | false}.
+#     version set   → FROM :<version>-slim, tags :<version> (+ :latest when latest is true)
+#     version empty → FROM :latest-slim, tags :latest
+# - Every push to main here rebuilds :latest on :latest-slim, so new UI ships right away.
+#   Version tags are never rebuilt by Studio changes.
+#
+# Pushing to the queryflux package needs either Actions write access for this repository
+# on that package (package settings → Manage Actions access), or a QUERYFLUX_PACKAGES_TOKEN
+# secret with write:packages.
+
+name: Bundled QueryFlux image
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "release-please/**"
+      - "LICENSE"
+  repository_dispatch:
+    types: [queryflux-image]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "QueryFlux version, e.g. v0.5.0 (builds on :v0.5.0-slim). Empty builds :latest on :latest-slim."
+        required: false
+        type: string
+      latest:
+        description: "Also tag :latest (only used when version is set)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  QUERYFLUX_IMAGE_NAME: ${{ vars.QUERYFLUX_IMAGE_NAME || 'lakeops-org/queryflux' }}
+
+concurrency:
+  group: bundled-image-${{ github.event.client_payload.version || inputs.version || 'latest' }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish server + Studio
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve base image and tags
+        id: tags
+        env:
+          VERSION: ${{ github.event.client_payload.version || inputs.version || '' }}
+          LATEST: ${{ github.event.client_payload.latest || inputs.latest || false }}
+        run: |
+          set -eu
+          image="${REGISTRY}/${QUERYFLUX_IMAGE_NAME}"
+          if [ -z "$VERSION" ]; then
+            base="${image}:latest-slim"
+            tags="${image}:latest"
+          else
+            if ! [[ "$VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,100}$ ]] || [[ "$VERSION" == *-slim ]]; then
+              echo "::error::invalid version '$VERSION' (pass the bare tag, e.g. v0.5.0)"
+              exit 1
+            fi
+            base="${image}:${VERSION}-slim"
+            tags="${image}:${VERSION}"
+            if [ "$LATEST" = "true" ]; then
+              tags="${tags},${image}:latest"
+            fi
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          {
+            echo "Base: \`$base\`"
+            echo ""
+            echo "Tags: \`$tags\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.QUERYFLUX_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: bundled
+          platforms: linux/amd64,linux/arm64
+          pull: true
+          push: true
+          build-args: |
+            QUERYFLUX_IMAGE=${{ steps.tags.outputs.base }}
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ env.QUERYFLUX_IMAGE_NAME }}
+            org.opencontainers.image.description=QueryFlux server + Studio
+            dev.queryflux.studio.revision=${{ github.sha }}
+          cache-from: type=gha,scope=bundled
+          cache-to: type=gha,mode=max,scope=bundled

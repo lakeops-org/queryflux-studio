@@ -39,3 +39,6 @@ jobs:
 
       - name: Build container image
         run: docker build -t queryflux-studio:ci .
+
+      - name: Build bundled QueryFlux image (on :latest-slim)
+        run: docker build --target bundled -t queryflux-bundled:ci .
