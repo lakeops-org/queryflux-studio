@@ -1,11 +1,18 @@
-import { getQueries, getDistinctEngines, getClusters } from "@/lib/api";
+import { getQueries, getDistinctEngines, getClusters, getWorkers } from "@/lib/api";
 import { QueryTable } from "./query-table";
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, History } from "lucide-react";
 
 export const revalidate = 0;
 
 interface Props {
-  searchParams: Promise<{ search?: string; status?: string; engine?: string; cluster_group?: string; page?: string }>;
+  searchParams: Promise<{
+    search?: string;
+    status?: string;
+    engine?: string;
+    cluster_group?: string;
+    worker?: string;
+    page?: string;
+  }>;
 }
 
 export default async function QueriesPage({ searchParams }: Props) {
@@ -14,23 +21,27 @@ export default async function QueriesPage({ searchParams }: Props) {
   const limit = 50;
   const offset = (page - 1) * limit;
 
-  const [queries, engines, clusters] = await Promise.all([
+  const [queries, engines, clusters, fleet] = await Promise.all([
     getQueries({
       search: params.search,
       status: params.status,
       engine: params.engine,
       cluster_group: params.cluster_group,
+      worker: params.worker,
       limit,
       offset,
     }),
     getDistinctEngines().catch(() => [] as string[]),
     getClusters().catch(() => []),
+    getWorkers().catch(() => null),
   ]);
+  const workerNames = (fleet?.workers ?? []).map((w) => w.name);
+  if (params.worker && !workerNames.includes(params.worker)) workerNames.push(params.worker);
 
   // Unique group names from live clusters
   const groups = [...new Set(clusters.map((c) => c.group_name))].sort();
 
-  const hasFilters = !!(params.search || params.status || params.engine || params.cluster_group);
+  const hasFilters = !!(params.search || params.status || params.engine || params.cluster_group || params.worker);
 
   // Base query string preserving all active filters (excluding page)
   const filterQs = new URLSearchParams();
@@ -38,6 +49,7 @@ export default async function QueriesPage({ searchParams }: Props) {
   if (params.status) filterQs.set("status", params.status);
   if (params.engine) filterQs.set("engine", params.engine);
   if (params.cluster_group) filterQs.set("cluster_group", params.cluster_group);
+  if (params.worker) filterQs.set("worker", params.worker);
   const filterBase = filterQs.toString() ? `?${filterQs}&` : "?";
 
   return (
@@ -105,6 +117,18 @@ export default async function QueriesPage({ searchParams }: Props) {
               <option value="">All groups</option>
               {groups.map((g) => (
                 <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          )}
+          {workerNames.length > 0 && (
+            <select
+              name="worker"
+              defaultValue={params.worker ?? ""}
+              className="h-9 px-3 rounded-lg border border-slate-200 text-sm bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 focus:bg-white transition-all cursor-pointer min-w-36"
+            >
+              <option value="">All workers</option>
+              {workerNames.sort().map((w) => (
+                <option key={w} value={w}>{w}</option>
               ))}
             </select>
           )}

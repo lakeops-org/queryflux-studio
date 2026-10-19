@@ -1,15 +1,19 @@
-import { getClusters, getDashboardStats, getQueries } from "@/lib/api";
+import Link from "next/link";
+import { getClusters, getDashboardStats, getQueries, getWorkers } from "@/lib/api";
+import { summarizeFleet } from "@/lib/worker-fleet";
 import { StatusBadge, EngineBadge, formatDuration, formatTime } from "@/components/ui-helpers";
-import { Activity, AlertCircle, AlertTriangle, Clock, Repeat2 } from "lucide-react";
+import { Activity, AlertCircle, AlertTriangle, Boxes, Clock, Repeat2 } from "lucide-react";
 
 export const revalidate = 10;
 
 export default async function DashboardPage() {
-  const [stats, clusters, recent] = await Promise.all([
+  const [stats, clusters, recent, fleet] = await Promise.all([
     getDashboardStats(),
     getClusters(),
     getQueries({ limit: 10 }),
+    getWorkers().catch(() => null),
   ]);
+  const fleetSummary = fleet?.enabled && fleet.workers.length > 0 ? summarizeFleet(fleet) : null;
 
   const errorRatePct = (stats.error_rate_last_hour * 100).toFixed(1);
   const translationRatePct = (stats.translation_rate_last_hour * 100).toFixed(1);
@@ -62,6 +66,31 @@ export default async function DashboardPage() {
           sub={`${translatedCount} translated`}
         />
       </div>
+
+      {fleetSummary && (
+        <Link
+          href="/workers"
+          className="flex items-center gap-4 bg-white rounded-xl border border-slate-200 px-5 py-4 shadow-xs hover:border-indigo-200 hover:shadow-sm transition-all"
+        >
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-100 text-indigo-600">
+            <Boxes size={18} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Workers</p>
+            <p className="text-sm text-slate-700 mt-0.5">
+              <span className="font-semibold tabular-nums">{fleetSummary.online}</span> of{" "}
+              <span className="tabular-nums">{fleetSummary.total}</span> online ·{" "}
+              <span className="tabular-nums">{fleetSummary.healthy}</span> healthy
+              {fleetSummary.needsAttention > 0 && (
+                <span className="text-amber-600">
+                  {" "}· <span className="tabular-nums">{fleetSummary.needsAttention}</span> need attention
+                </span>
+              )}
+            </p>
+          </div>
+          <span className="text-xs font-medium text-indigo-600">View fleet →</span>
+        </Link>
+      )}
 
       {/* Cluster status */}
       <section>

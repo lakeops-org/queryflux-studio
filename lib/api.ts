@@ -14,6 +14,7 @@ import type {
   QueryHistoryRecord,
   QueryListParams,
   TestCatalogProviderResponse,
+  WorkerFleetDto,
 } from "./api-types";
 import {
   SESSION_COOKIE_NAME,
@@ -212,10 +213,16 @@ export async function getQueries(params: QueryListParams = {}): Promise<QueryHis
   if (params.status) qs.set("status", params.status);
   if (params.cluster_group) qs.set("cluster_group", params.cluster_group);
   if (params.engine) qs.set("engine", params.engine);
+  if (params.worker) qs.set("worker", params.worker);
   if (params.limit != null) qs.set("limit", String(params.limit));
   if (params.offset != null) qs.set("offset", String(params.offset));
   const query = qs.toString() ? `?${qs}` : "";
   return apiFetch<QueryHistoryRecord[]>(`/admin/queries${query}`);
+}
+
+/** Workers registered with this control plane. `enabled: false` when it serves none. */
+export async function getWorkers(): Promise<WorkerFleetDto> {
+  return apiFetch<WorkerFleetDto>("/admin/workers");
 }
 
 export async function getDistinctEngines(): Promise<string[]> {
