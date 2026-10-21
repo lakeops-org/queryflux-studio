@@ -453,6 +453,12 @@ function WorkerDetail({ worker: w, fleet, onClose }: { worker: WorkerView; fleet
             {w.inSync === true && <span className="ml-1.5 text-emerald-600">in sync</span>}
             {w.inSync === false && <span className="ml-1.5 text-amber-600">behind</span>}
           </Row>
+          {w.status.servedRevision && w.status.servedRevision !== w.activeRevision && (
+            <Row label="Serves its workers">
+              <code className="font-mono">{w.status.servedRevision}</code>
+              <span className="ml-1.5 text-slate-400">without the history endpoint</span>
+            </Row>
+          )}
           {w.downloadedRevision && w.downloadedRevision !== w.activeRevision && (
             <Row label="Downloaded, not active">
               <code className="font-mono text-red-600">{w.downloadedRevision}</code>

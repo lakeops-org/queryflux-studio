@@ -161,6 +161,8 @@ export interface WorkerStatus {
   history: WorkerHistoryStatus | null;
   /** Enabled query frontends, e.g. `trinoHttp:8080`. */
   frontends: string[];
+  /** Site agent only: the revision it serves its workers (re-sealed when it removed a history endpoint). */
+  servedRevision?: string | null;
 }
 
 export interface WorkerView {
