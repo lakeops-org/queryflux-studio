@@ -5,10 +5,20 @@ import type { WorkerFleetDto, WorkerView } from "./api-types";
  * - offline: no report within three heartbeat intervals;
  * - unconfigured: reporting, but no config activated yet;
  * - failing: config sync with the control plane keeps failing;
- * - stale: running a config copied from a peer, not yet confirmed by the control plane;
+ * - stale: running a config copied from a peer (a site agent: from its disk cache), not yet
+ *   confirmed by the control plane;
  * - behind: running an older revision than the control plane serves;
  * - healthy.
  */
+export function isSiteAgent(w: WorkerView): boolean {
+  return w.kind === "siteAgent";
+}
+
+/** The site a worker or site agent belongs to; null for a worker connected directly. */
+export function siteOf(w: WorkerView): string | null {
+  return w.parent ?? (isSiteAgent(w) ? (w.labels.site ?? null) : null);
+}
+
 export type WorkerHealth = "offline" | "unconfigured" | "failing" | "stale" | "behind" | "healthy";
 
 export function workerHealth(w: WorkerView): WorkerHealth {
@@ -55,6 +65,8 @@ export const HEALTH_STYLE: Record<WorkerHealth, { label: string; dot: string; ba
 
 export interface FleetSummary {
   total: number;
+  /** Of `total`, how many are site agents. */
+  siteAgents: number;
   online: number;
   healthy: number;
   needsAttention: number;
@@ -82,12 +94,25 @@ export function summarizeFleet(fleet: WorkerFleetDto): FleetSummary {
       `${dropped.map((w) => w.name).join(", ")} dropped query history while the history endpoint was unreachable.`,
     );
   }
+  // A site's workers reach this control plane only through its agents.
+  const agents = workers.filter(isSiteAgent);
+  const sites = [...new Set(agents.map(siteOf).filter((s): s is string => !!s))];
+  for (const site of sites) {
+    const atSite = agents.filter((a) => siteOf(a) === site);
+    if (!atSite.some((a) => a.state === "online")) {
+      warnings.push(
+        `No site agent of ${site} is reporting. Its workers keep running their config, but their status ` +
+          `and query history don't reach this control plane until an agent is back.`,
+      );
+    }
+  }
   if (fleet.revisionError) {
     warnings.push(`The control plane cannot build its worker config: ${fleet.revisionError}`);
   }
 
   return {
     total: workers.length,
+    siteAgents: agents.length,
     online: online.length,
     healthy,
     needsAttention: online.length - online.filter((w) => workerHealth(w) === "healthy").length,

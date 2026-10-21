@@ -35,7 +35,8 @@ export default async function QueriesPage({ searchParams }: Props) {
     getClusters().catch(() => []),
     getWorkers().catch(() => null),
   ]);
-  const workerNames = (fleet?.workers ?? []).map((w) => w.name);
+  // Site agents run no queries; their workers' records name the worker.
+  const workerNames = (fleet?.workers ?? []).filter((w) => w.kind !== "siteAgent").map((w) => w.name);
   if (params.worker && !workerNames.includes(params.worker)) workerNames.push(params.worker);
 
   // Unique group names from live clusters

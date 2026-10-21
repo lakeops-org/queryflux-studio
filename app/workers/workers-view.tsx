@@ -12,6 +12,7 @@ import {
   History,
   Network,
   Radio,
+  RadioTower,
   Search,
   Server,
   Tag,
@@ -22,7 +23,9 @@ import { formatDateTime } from "@/components/ui-helpers";
 import {
   HEALTH_STYLE,
   formatAgo,
+  isSiteAgent,
   shortRevision,
+  siteOf,
   summarizeFleet,
   workerHealth,
 } from "@/lib/worker-fleet";
@@ -93,7 +96,7 @@ export function WorkersView({ fleet, error }: { fleet: WorkerFleetDto | null; er
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search name or label (team=checkout)…"
+                  placeholder="Search name, site or label (team=checkout)…"
                   className="w-full h-9 pl-8 pr-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
                 />
               </div>
@@ -131,7 +134,7 @@ function Header({ fleet }: { fleet: WorkerFleetDto | null }) {
           </div>
           <p className="text-sm text-slate-500 mt-2 max-w-2xl">
             Workers run queries next to your applications. They take their config from this control plane, share
-            its capacity limits and send it their query history.
+            its capacity limits and send it their query history, directly or through their site&apos;s agent.
           </p>
         </div>
         {fleet?.enabled && (
@@ -151,7 +154,10 @@ function Header({ fleet }: { fleet: WorkerFleetDto | null }) {
 function SummaryCards({ fleet }: { fleet: WorkerFleetDto }) {
   const s = summarizeFleet(fleet);
   const cards = [
-    { label: "Workers", value: s.total, sub: "seen in the last 7 days", icon: <Boxes size={18} />, tone: "bg-indigo-100 text-indigo-600" },
+    {
+      label: "Workers",
+      value: s.total,
+      sub: s.siteAgents > 0 ? `incl. ${s.siteAgents} site agent${s.siteAgents === 1 ? "" : "s"} · last 7 days` : "seen in the last 7 days", icon: <Boxes size={18} />, tone: "bg-indigo-100 text-indigo-600" },
     { label: "Online", value: s.online, sub: `${s.total - s.online} offline`, icon: <Radio size={18} />, tone: "bg-emerald-100 text-emerald-600" },
     { label: "Healthy", value: s.healthy, sub: "in sync, no errors", icon: <CheckCircle2 size={18} />, tone: "bg-sky-100 text-sky-600" },
     {
@@ -200,6 +206,19 @@ function HealthBadge({ worker }: { worker: WorkerView }) {
       <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
       {style.label}
     </span>
+  );
+}
+
+/** "site agent · dc1" for an agent, "behind dc1's agent" for a worker relayed by one. */
+function KindTag({ worker: w }: { worker: WorkerView }) {
+  const site = siteOf(w);
+  if (!site) return null;
+  return isSiteAgent(w) ? (
+    <span className="inline-flex items-center mt-1 text-[10px] font-medium text-violet-700 bg-violet-50 ring-1 ring-violet-200 px-1.5 py-0.5 rounded-md">
+      site agent · {site}
+    </span>
+  ) : (
+    <span className="inline-flex items-center mt-1 text-[10px] text-violet-600">behind {site}&apos;s agent</span>
   );
 }
 
@@ -258,9 +277,14 @@ function WorkerTable({
             >
               <td className="px-4 py-3">
                 <div className="flex items-center gap-1.5 font-mono text-xs text-slate-800 font-medium">
-                  <Server size={12} className="text-indigo-400 flex-shrink-0" />
+                  {isSiteAgent(w) ? (
+                    <RadioTower size={12} className="text-violet-500 flex-shrink-0" />
+                  ) : (
+                    <Server size={12} className="text-indigo-400 flex-shrink-0" />
+                  )}
                   {w.name}
                 </div>
+                <KindTag worker={w} />
                 <Labels labels={w.labels} />
               </td>
               <td className="px-4 py-3">
@@ -276,16 +300,26 @@ function WorkerTable({
                   {shortRevision(w.activeRevision)}
                 </code>
                 <div className="text-[11px] text-slate-400 mt-0.5">
-                  {w.status.configSource === "peer" ? "copied from a peer" : w.inSync === false ? "older than control plane" : "from control plane"}
+                  {w.status.configSource === "peer"
+                    ? "copied from a peer"
+                    : w.status.configSource === "cache"
+                      ? "cached on disk"
+                      : w.inSync === false
+                        ? "older than control plane"
+                        : w.parent
+                          ? "via site agent"
+                          : "from control plane"}
                 </div>
               </td>
               <td className="px-4 py-3 text-xs text-slate-600">
-                {w.coordinationMode === "local" ? (
+                {isSiteAgent(w) ? (
+                  <span>forwards upstream</span>
+                ) : w.coordinationMode === "local" ? (
                   <span className="text-amber-700">local limits</span>
                 ) : (
                   <span>shared</span>
                 )}
-                {w.coordinationMode !== "local" && (
+                {w.coordinationMode !== "local" && !isSiteAgent(w) && (
                   <div className="text-[11px] text-slate-400 mt-0.5">
                     {w.status.onUnavailable === "localLimits" ? "falls back to local" : "fail closed"}
                   </div>
@@ -339,6 +373,10 @@ function EmptyFleet() {
   controlPlane:
     url: https://<this-control-plane>:9000
     auth: { mode: sharedSecret, sharedSecret: <secret> }`}</pre>
+      <p className="text-xs text-slate-400 mt-3">
+        Workers in a network that can only connect outward register through a site agent (
+        <code className="font-mono">role: siteAgent</code>) and show up here as <code className="font-mono">&lt;site&gt;/&lt;worker&gt;</code>.
+      </p>
     </div>
   );
 }
@@ -394,6 +432,7 @@ function WorkerDetail({ worker: w, fleet, onClose }: { worker: WorkerView; fleet
                 {w.state} · seen {formatAgo(w.secondsSinceSeen)}
               </span>
             </div>
+            <KindTag worker={w} />
             <Labels labels={w.labels} />
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" title="Close">
@@ -420,7 +459,15 @@ function WorkerDetail({ worker: w, fleet, onClose }: { worker: WorkerView; fleet
             </Row>
           )}
           <Row label="Source">
-            {w.status.configSource === "peer" ? "copied from a peer worker" : w.status.configSource === "controlPlane" ? "control plane" : "—"}
+            {w.status.configSource === "peer"
+              ? "copied from a peer worker"
+              : w.status.configSource === "cache"
+                ? "the agent's disk cache"
+                : w.parent
+                  ? `control plane, through ${w.parent}'s agent`
+                  : w.status.configSource === "controlPlane"
+                    ? "control plane"
+                    : "—"}
           </Row>
           {w.status.stale && <Row label="Stale">not yet confirmed by the control plane</Row>}
           <Row label="Confirmed by control plane">{when(w.status.confirmedAt)}</Row>
@@ -430,8 +477,14 @@ function WorkerDetail({ worker: w, fleet, onClose }: { worker: WorkerView; fleet
         </Section>
 
         <Section icon={<Cpu size={12} />} title="Capacity">
-          <Row label="Limits">{w.coordinationMode === "local" ? "this worker alone (local)" : "shared with the fleet"}</Row>
-          {w.coordinationMode !== "local" && (
+          <Row label="Limits">
+            {isSiteAgent(w)
+              ? "forwards its workers' capacity calls to this control plane"
+              : w.coordinationMode === "local"
+                ? "this worker alone (local)"
+                : "shared with the fleet"}
+          </Row>
+          {w.coordinationMode !== "local" && !isSiteAgent(w) && (
             <Row label="Control plane unreachable">
               {w.status.onUnavailable === "localLimits" ? "admit on this worker's own limit" : "new queries wait (fail closed)"}
             </Row>
@@ -442,7 +495,9 @@ function WorkerDetail({ worker: w, fleet, onClose }: { worker: WorkerView; fleet
         <Section icon={<History size={12} />} title="Query history">
           <Row label="Redaction">{w.status.history?.redaction ?? "full"}</Row>
           <Row label="Endpoint">
-            <span className="font-mono">{w.status.history?.endpoint ?? "control plane"}</span>
+            <span className="font-mono">
+              {w.status.history?.endpoint ?? (w.parent ? `${w.parent}'s agent` : "control plane")}
+            </span>
           </Row>
           <Row label="Sent">{w.status.history?.sent.toLocaleString() ?? "—"}</Row>
           <Row label="Queued">{w.status.history?.queued.toLocaleString() ?? "—"}</Row>
@@ -452,11 +507,15 @@ function WorkerDetail({ worker: w, fleet, onClose }: { worker: WorkerView; fleet
             </span>
           </Row>
           {w.status.history?.lastError && <Row label="Last error">{w.status.history.lastError}</Row>}
-          <div className="pt-2">
-            <Link href={`/queries?worker=${encodeURIComponent(w.name)}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
-              View this worker&apos;s queries →
-            </Link>
-          </div>
+          {isSiteAgent(w) ? (
+            <Row label="Spool">history waits on the agent&apos;s disk until this control plane accepts it</Row>
+          ) : (
+            <div className="pt-2">
+              <Link href={`/queries?worker=${encodeURIComponent(w.name)}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                View this worker&apos;s queries →
+              </Link>
+            </div>
+          )}
         </Section>
 
         <Section icon={<Radio size={12} />} title="Process">

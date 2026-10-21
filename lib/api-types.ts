@@ -144,7 +144,10 @@ export interface WorkerHistoryStatus {
 }
 
 export interface WorkerStatus {
-  /** `controlPlane`, or `peer` when the config was copied from another worker at startup. */
+  /**
+   * `controlPlane`; `peer` when the config was copied from another worker at startup; `cache`
+   * when a site agent serves the snapshot it cached on disk (upstream unreachable since it started).
+   */
   configSource: string | null;
   /** True while the active config has not been confirmed by the control plane. */
   stale: boolean;
@@ -172,6 +175,10 @@ export interface WorkerView {
   lastSeen: string;
   registeredAt: string | null;
   status: WorkerStatus;
+  /** `worker`, or `siteAgent` for a site agent relaying a remote site's workers. Older QueryFlux omits it. */
+  kind?: string;
+  /** For a worker behind a site agent: the site. Its name is then `<site>/<worker>`. */
+  parent?: string | null;
   state: "online" | "offline";
   /** Whether the worker runs the control plane's current revision; null when unknown. */
   inSync: boolean | null;
